@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense, startTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import QuizCard from "@/components/QuizCard";
 import ExplanationBox from "@/components/ExplanationBox";
-import type { Question, OptionKey } from "@/types";
+import { useAppData } from "@/lib/app-data-context";
+import type { OptionKey } from "@/types";
 
 type ExplainData = {
   notionPageId: string;
@@ -17,7 +18,7 @@ function QuizContent() {
   const searchParams = useSearchParams();
   const jumpTo = searchParams.get("q");
 
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const { questions, answered, refreshAnswered } = useAppData();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
@@ -26,19 +27,13 @@ function QuizContent() {
   const [explainData, setExplainData] = useState<ExplainData | null>(null);
   const [loadingExplain, setLoadingExplain] = useState(false);
 
-  const validQuestions = questions.filter((q) => q.answer !== "");
+  const validQuestions = questions;
   const current = validQuestions[currentIndex];
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/questions").then((r) => r.json()),
-      fetch("/api/answered").then((r) => r.json()),
-    ]).then(([qs, answered]: [Question[], { questionNum: number; status: string }[]]) => {
-      setQuestions(qs);
-      setCorrectCount(answered.filter((a) => a.status === "정답").length);
-      setWrongCount(answered.filter((a) => a.status === "오답").length);
-    });
-  }, []);
+    setCorrectCount(answered.filter((a) => a.status === "정답").length);
+    setWrongCount(answered.filter((a) => a.status === "오답").length);
+  }, [answered]);
 
   useEffect(() => {
     if (!jumpTo || !validQuestions.length) return;
@@ -70,6 +65,7 @@ function QuizContent() {
     const data = await res.json();
     setExplainData(data);
     setLoadingExplain(false);
+    refreshAnswered();
   }
 
   function handleNext() {

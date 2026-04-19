@@ -10,6 +10,7 @@ export type Question = {
   };
   answer: string;
   explanation: string;
+  topics: string[];
 };
 
 export type OptionKey = "A" | "B" | "C" | "D" | "E";

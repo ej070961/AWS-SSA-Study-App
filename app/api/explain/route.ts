@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getQuestionEntry, saveOrUpdateQuestion } from "@/lib/notion";
 import type { OptionKey } from "@/types";
 
@@ -21,6 +22,8 @@ export async function POST(req: NextRequest) {
 
   // 저장 후 해설이 있으면 함께 반환
   const entry = await getQuestionEntry(questionNum);
+
+  revalidateTag("answered", { expire: 0 });
 
   return NextResponse.json({
     notionPageId,

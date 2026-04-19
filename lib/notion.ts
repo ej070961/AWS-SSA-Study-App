@@ -1,4 +1,5 @@
 import { Client } from "@notionhq/client";
+import { unstable_cache } from "next/cache";
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { ContentBlock, NoteContent, NoteResponse, WrongEntry } from "@/types";
 
@@ -223,19 +224,23 @@ export async function saveOrUpdateQuestion(
   return page.id;
 }
 
-export async function getAnsweredQuestions(): Promise<{ questionNum: number; status: string }[]> {
-  const res = await notion.databases.query({
-    database_id: process.env.NOTION_DB_EXPLAIN!,
-    filter: {
-      property: "Status",
-      select: { is_not_empty: true },
-    },
-  });
-  return res.results.map((p: any) => ({
-    questionNum: p.properties["Question Number"]?.number ?? 0,
-    status: p.properties.Status?.select?.name ?? "",
-  }));
-}
+export const getAnsweredQuestions = unstable_cache(
+  async (): Promise<{ questionNum: number; status: string }[]> => {
+    const res = await notion.databases.query({
+      database_id: process.env.NOTION_DB_EXPLAIN!,
+      filter: {
+        property: "Status",
+        select: { is_not_empty: true },
+      },
+    });
+    return res.results.map((p: any) => ({
+      questionNum: p.properties["Question Number"]?.number ?? 0,
+      status: p.properties.Status?.select?.name ?? "",
+    }));
+  },
+  ["answered-questions"],
+  { revalidate: 60, tags: ["answered"] }
+);
 
 export async function getWrongList(): Promise<WrongEntry[]> {
   const res = await notion.databases.query({
